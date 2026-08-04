@@ -25,6 +25,7 @@ Implementación del clásico **Tetris** en JavaScript vanilla, usando HTML5 Canv
   - [Tecnologías](#tecnologías)
   - [Estructura del proyecto](#estructura-del-proyecto)
   - [Personalización](#personalización)
+  - [Publicar cambios (de tu PC a la página en vivo)](#publicar-cambios-de-tu-pc-a-la-página-en-vivo)
   - [Licencia](#licencia)
 
 ---
@@ -178,6 +179,53 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `dropInterval` | Velocidad inicial de caída en ms         | `1000`                |
 
 > Si cambias `COLS`, `ROWS` o `BLOCK`, recuerda ajustar también `width` y `height` del `<canvas id="board">` en `index.html` para que coincida (`COLS × BLOCK` × `ROWS × BLOCK`).
+
+---
+
+## Publicar cambios (de tu PC a la página en vivo)
+
+El juego está publicado con **GitHub Pages** en:
+
+**https://macavd.github.io/claude-tetris/**
+
+La página se sirve **desde GitHub**, nunca desde tu disco. Por eso un cambio no
+aparece online hasta que lo subes (`push`). El flujo completo tiene 4 etapas:
+
+```
+[1] Editar    →   [2] Commit    →   [3] Push    →   [4] Pages publica
+ (tu disco)       (git local)      (a GitHub)      (automático)
+```
+
+1. **Editar y probar en tu PC** — cambias el código y lo pruebas localmente
+   (`python3 -m http.server 8000` → `http://localhost:8000`). El cambio solo
+   existe en tu disco.
+2. **Commit** — registras el cambio en tu git local:
+   ```bash
+   git add .
+   git commit -m "Descripción del cambio"
+   ```
+3. **Push** — subes tus commits a GitHub:
+   ```bash
+   git pull origin main    # PRIMERO: traé lo último para no divergir
+   git push origin main    # sube tus commits
+   ```
+4. **GitHub Pages publica** — automático. Al llegar el push a `main`, Pages
+   reconstruye solo (~1-2 min). Refrescá con **Ctrl+F5** para saltarte la caché.
+
+### Resumen del día a día
+
+```bash
+git pull origin main               # 1. traer lo último
+# ...editás y probás...
+git add .                          # 2.
+git commit -m "mi cambio"          # 3.
+git push origin main               # 4. → Pages publica solo
+```
+
+> **Idea central:** tu PC y GitHub son dos copias distintas. Hacer `git pull`
+> antes de trabajar (y antes de `push`) mantiene ambas sincronizadas y evita que
+> las historias **divergan** (cuando tu `main` local y el de GitHub tienen
+> commits distintos y el push es rechazado).
 
 ---
 

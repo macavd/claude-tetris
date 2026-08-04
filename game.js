@@ -34,6 +34,8 @@ const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
 const nextCtx = nextCanvas.getContext('2d');
+const holdCanvas = document.getElementById('hold-canvas');
+const holdCtx = holdCanvas.getContext('2d');
 const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
@@ -43,17 +45,38 @@ const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggleBtn = document.getElementById('theme-toggle');
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let board, current, next, hold, holdUsed, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let gridColor = '#22222e';
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
 }
 
-function randomPiece() {
-  const type = Math.floor(Math.random() * 8) + 1; // 1..8 (incluye la tuerca)
+function makePiece(type) {
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
+}
+
+function randomPiece() {
+  return makePiece(Math.floor(Math.random() * 8) + 1); // 1..8 (incluye la tuerca)
+}
+
+function holdPiece() {
+  if (holdUsed) return;
+  const currentType = current.type;
+  if (hold === null) {
+    hold = currentType;
+    spawn(); // toma la pieza de "next"
+  } else {
+    const swapType = hold;
+    hold = currentType;
+    current = makePiece(swapType);
+    if (collide(current.shape, current.x, current.y)) {
+      endGame();
+    }
+  }
+  holdUsed = true;
+  drawHold();
 }
 
 function collide(shape, ox, oy) {
@@ -142,7 +165,9 @@ function softDrop() {
 function lockPiece() {
   merge();
   clearLines();
+  holdUsed = false;
   spawn();
+  drawHold();
 }
 
 function spawn() {
@@ -253,6 +278,19 @@ function drawNext() {
       drawBlock(nextCtx, offX + c, offY + r, shape[r][c], NB);
 }
 
+function drawHold() {
+  const HB = 30;
+  holdCanvas.classList.toggle('locked', holdUsed);
+  holdCtx.clearRect(0, 0, holdCanvas.width, holdCanvas.height);
+  if (hold === null) return;
+  const shape = PIECES[hold];
+  const offX = Math.floor((4 - shape[0].length) / 2);
+  const offY = Math.floor((4 - shape.length) / 2);
+  for (let r = 0; r < shape.length; r++)
+    for (let c = 0; c < shape[r].length; c++)
+      drawBlock(holdCtx, offX + c, offY + r, shape[r][c], HB);
+}
+
 function endGame() {
   gameOver = true;
   cancelAnimationFrame(animId);
@@ -301,8 +339,11 @@ function init() {
   dropInterval = 1000;
   dropAccum = 0;
   lastTime = performance.now();
+  hold = null;
+  holdUsed = false;
   next = randomPiece();
   spawn();
+  drawHold();
   updateHUD();
   overlay.classList.add('hidden');
   cancelAnimationFrame(animId);
@@ -329,6 +370,11 @@ document.addEventListener('keydown', e => {
     case 'Space':
       e.preventDefault();
       hardDrop();
+      break;
+    case 'KeyC':
+    case 'ShiftLeft':
+    case 'ShiftRight':
+      holdPiece();
       break;
   }
   updateHUD();
