@@ -13,6 +13,7 @@ const COLORS = [
   '#e57373', // Z - red
   '#7986cb', // J - indigo
   '#ffb74d', // L - orange
+  '#9e9e9e', // Tuerca - gris metálico
 ];
 
 const PIECES = [
@@ -24,6 +25,7 @@ const PIECES = [
   [[5,5,0],[0,5,5],[0,0,0]],                  // Z
   [[6,0,0],[6,6,6],[0,0,0]],                  // J
   [[0,0,7],[7,7,7],[0,0,0]],                  // L
+  [[8,8,8],[8,0,8],[8,8,8]],                  // Tuerca (hueco central)
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
@@ -47,7 +49,7 @@ function createBoard() {
 }
 
 function randomPiece() {
-  const type = Math.floor(Math.random() * 7) + 1;
+  const type = Math.floor(Math.random() * 8) + 1; // 1..8 (incluye la tuerca)
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
 }
@@ -158,8 +160,39 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
   context.globalAlpha = alpha ?? 1;
+
+  // Tuerca: celda metálica biselada con esquinas redondeadas (índice 8).
+  if (colorIndex === 8) {
+    const px = x * size + 1;
+    const py = y * size + 1;
+    const s = size - 2;
+    const radius = size * 0.28;
+    // Base metálica con degradado (claro arriba-izq → oscuro abajo-der).
+    const grad = context.createLinearGradient(px, py, px + s, py + s);
+    grad.addColorStop(0, '#c4c4c4');
+    grad.addColorStop(0.5, '#9e9e9e');
+    grad.addColorStop(1, '#6b6b6b');
+    context.beginPath();
+    context.roundRect(px, py, s, s, radius);
+    context.fillStyle = grad;
+    context.fill();
+    // Realce claro arriba/izquierda.
+    context.strokeStyle = 'rgba(255,255,255,0.35)';
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.roundRect(px + 1, py + 1, s - 2, s - 2, radius - 1);
+    context.stroke();
+    // Sombra oscura abajo/derecha para el bisel.
+    context.fillStyle = 'rgba(0,0,0,0.18)';
+    context.beginPath();
+    context.roundRect(px + s * 0.45, py + s * 0.45, s * 0.55, s * 0.55, radius);
+    context.fill();
+    context.globalAlpha = 1;
+    return;
+  }
+
+  const color = COLORS[colorIndex];
   context.fillStyle = color;
   context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
   // highlight
