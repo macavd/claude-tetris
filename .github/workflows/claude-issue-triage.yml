@@ -1,0 +1,96 @@
+name: Triaje de Issues con Claude
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  triage:
+    # Evita ejecutar sobre issues que en realidad son pull requests
+    if: ${{ github.event.issue.pull_request == null }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write # necesario para crear/aplicar labels y comentar
+      id-token: write
+
+    steps:
+      - name: Sincronizar labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          crear_label() {
+            gh label create "$1" --color "$2" --description "$3" --force
+          }
+          crear_label "tipo: bug"            "d73a4a" "Algo no funciona como debería"
+          crear_label "tipo: mejora"         "a2eeef" "Nueva funcionalidad o mejora"
+          crear_label "tipo: pregunta"       "d876e3" "Duda o solicitud de información"
+          crear_label "tipo: documentación"  "0075ca" "Mejoras o adiciones a la documentación"
+          crear_label "área: jugabilidad"    "0e8a16" "Mecánicas del juego (piezas, colisiones, spawn, lock)"
+          crear_label "área: renderizado"    "1d76db" "Dibujo en canvas, grilla, pieza fantasma, next"
+          crear_label "área: controles"      "5319e7" "Entrada de teclado, rotación, movimiento, drops"
+          crear_label "área: puntuación"     "fbca04" "Puntos, niveles, velocidad, líneas"
+          crear_label "área: ui"             "c5def5" "Interfaz, estilos, textos, layout"
+          crear_label "prioridad: alta"      "b60205" "Debe resolverse pronto"
+          crear_label "prioridad: media"     "fbca04" "Importancia moderada"
+          crear_label "prioridad: baja"      "0e8a16" "Puede esperar"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*),Read,Grep,Glob"'
+          prompt: |
+            Eres el responsable de triaje de issues de este repositorio (un Tetris en
+            JavaScript vanilla: index.html, style.css, game.js). Estás analizando el
+            issue #${{ github.event.issue.number }}.
+
+            Trabaja SIEMPRE en español (respeta el idioma del proyecto, ver CLAUDE.md).
+
+            Tu tarea tiene dos partes: (1) etiquetar el issue y (2) publicar un
+            diagnóstico. NO modifiques código ni abras pull requests.
+
+            Pasos:
+            1. Lee el título y el cuerpo del issue con:
+               `gh issue view ${{ github.event.issue.number }}`
+            2. Analiza el código relevante del repositorio (sobre todo `game.js`, y
+               `index.html`/`style.css` si aplica) para fundamentar el diagnóstico. Usa
+               Read/Grep/Glob.
+            3. Asigna labels usando EXCLUSIVAMENTE este conjunto (no inventes otros):
+               - tipo (elige exactamente uno): "tipo: bug", "tipo: mejora",
+                 "tipo: pregunta", "tipo: documentación"
+               - área (elige una o varias según corresponda): "área: jugabilidad",
+                 "área: renderizado", "área: controles", "área: puntuación", "área: ui"
+               - prioridad (elige exactamente una): "prioridad: alta",
+                 "prioridad: media", "prioridad: baja"
+               Aplícalos con:
+               `gh issue edit ${{ github.event.issue.number }} --add-label "tipo: bug" --add-label "área: controles" --add-label "prioridad: media"`
+               (todos en una sola invocación). Si el issue ya tenía labels de este
+               conjunto que ya no correspondan, no te preocupes por quitarlos.
+            4. Publica UN ÚNICO comentario de diagnóstico con
+               `gh issue comment ${{ github.event.issue.number }} --body "..."`
+               siguiendo esta estructura en Markdown:
+
+               ## 🔍 Diagnóstico automático
+
+               **Resumen:** qué se pide o qué falla, en 1-2 frases.
+
+               **Zonas afectadas:** archivos y funciones concretas involucradas
+               (p. ej. `game.js` → `tryRotate`, `lockPiece`, `clearLines`, `spawn`,
+               `drawNext`…). Sé específico.
+
+               **Causa raíz / hipótesis:** para bugs, la causa probable con referencia
+               al código. Para mejoras, las consideraciones de diseño relevantes.
+
+               **Enfoque sugerido para la solución:** pasos concretos y accionables que
+               sirvan de base para implementar el PR posterior.
+
+            Sé preciso y conciso. El diagnóstico debe ser suficientemente detallado como
+            para que otra persona (o Claude) implemente la solución a partir de él.
