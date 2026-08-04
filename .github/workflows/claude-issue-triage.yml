@@ -75,8 +75,11 @@ jobs:
                (todos en una sola invocación). Si el issue ya tenía labels de este
                conjunto que ya no correspondan, no te preocupes por quitarlos.
             4. Publica UN ÚNICO comentario de diagnóstico con
-               `gh issue comment ${{ github.event.issue.number }} --body "..."`
-               siguiendo esta estructura en Markdown:
+               `gh issue comment ${{ github.event.issue.number }} --body "..."`.
+               El comentario DEBE estar escrito en Markdown compatible con GitHub
+               (GitHub Flavored Markdown): encabezados con `#`, negritas con `**`,
+               código en línea con backticks, listas, etc., de forma que GitHub lo
+               renderice correctamente. Sigue esta estructura:
 
                ## 🔍 Diagnóstico automático
 
