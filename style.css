@@ -224,3 +224,147 @@ kbd {
 #restart-btn:hover {
   background: var(--btn-hover);
 }
+
+/* ---- Tabla de records ---- */
+.records-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.records-panel.hidden {
+  display: none;
+}
+
+.records-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  font-family: 'Courier New', Courier, monospace;
+  color: var(--text);
+  min-width: 260px;
+}
+
+.records-table th {
+  color: var(--label-color);
+  font-weight: 600;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  text-align: right;
+  font-size: 10px;
+}
+
+.records-table th:nth-child(2) {
+  text-align: left;
+}
+
+.records-table td {
+  padding: 3px 8px;
+  text-align: right;
+  border-top: 1px solid var(--board-border);
+}
+
+.records-table td:nth-child(2) {
+  text-align: left;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.records-table tr.highlight td {
+  color: var(--btn-text);
+  background: var(--accent);
+  font-weight: 700;
+}
+
+.records-table .no-records {
+  text-align: center;
+  color: var(--controls-text);
+  border-top: none;
+  padding: 10px;
+}
+
+.records-extra {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--controls-text);
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.records-extra b {
+  color: var(--accent);
+}
+
+/* ---- Entrada de nombre ---- */
+.name-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.name-entry.hidden {
+  display: none;
+}
+
+.name-entry-label {
+  font-size: 13px;
+  color: var(--overlay-title-color);
+  font-weight: 700;
+}
+
+.name-entry-row {
+  display: flex;
+  gap: 8px;
+}
+
+#name-input {
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--text);
+  font-family: inherit;
+  width: 150px;
+}
+
+#name-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+#save-score-btn {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#save-score-btn:hover {
+  background: var(--btn-hover);
+}
+
+.secondary-btn {
+  background: transparent;
+  color: var(--controls-text);
+  border: 1px solid var(--board-border);
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.secondary-btn:hover {
+  border-color: var(--overlay-title-color);
+  color: var(--overlay-title-color);
+}
