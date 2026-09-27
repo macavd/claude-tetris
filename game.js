@@ -30,6 +30,62 @@ const PIECES = [
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
+// ---- Skins (temas visuales del render del canvas) ----
+// Cada skin define opcionalmente una paleta que reemplaza a COLORS (índices 1–8),
+// un color de fondo del canvas (bg), un color de grilla propio (grid) y la función
+// que dibuja un bloque normal. La skin es un eje INDEPENDIENTE del tema claro/oscuro:
+// el tema afecta el chrome CSS; la skin afecta el render del canvas.
+// La Tuerca (índice 8) se dibuja siempre metálica biselada mediante drawNut(),
+// sin importar la skin activa.
+const SKINS = {
+  retro: {
+    label: 'Retro',
+    palette: null, // usa COLORS tal cual (colores planos, bloques cuadrados)
+    bg: null,
+    grid: null,
+    drawBlock: drawRetroBlock,
+  },
+  neon: {
+    label: 'Neon',
+    palette: ['#00e5ff', '#ffea00', '#e040fb', '#69f0ae', '#ff5252', '#40c4ff', '#ffab40', '#b0bec5'],
+    bg: '#0a0a12',
+    grid: 'rgba(180, 200, 255, 0.08)',
+    drawBlock: drawNeonBlock,
+  },
+  pastel: {
+    label: 'Pastel',
+    palette: ['#a0e7e5', '#fbe7a1', '#d7b8f3', '#b8e6c1', '#f7b7b7', '#b7d3f7', '#f7d4a8', '#cfcfcf'],
+    bg: null,
+    grid: null,
+    drawBlock: drawPastelBlock,
+  },
+  pixel: {
+    label: 'Pixel art',
+    palette: null,
+    bg: null,
+    grid: null,
+    drawBlock: drawPixelBlock,
+  },
+};
+
+let activeSkin = 'retro';
+
+// Color base de un índice según la paleta de la skin activa (o COLORS por defecto).
+function skinColor(colorIndex) {
+  const skin = SKINS[activeSkin];
+  if (skin && skin.palette) return skin.palette[colorIndex - 1];
+  return COLORS[colorIndex];
+}
+
+// Pinta el fondo del canvas si la skin define uno (p. ej. Neon oscuro).
+function fillSkinBg(context, w, h) {
+  const bg = SKINS[activeSkin].bg;
+  if (bg) {
+    context.fillStyle = bg;
+    context.fillRect(0, 0, w, h);
+  }
+}
+
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
@@ -44,6 +100,7 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggleBtn = document.getElementById('theme-toggle');
+const skinSelect = document.getElementById('skin-select');
 
 let board, current, next, hold, holdUsed, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let gridColor = '#22222e';
@@ -185,51 +242,114 @@ function updateHUD() {
   levelEl.textContent = level;
 }
 
+// Punto de entrada del render de un bloque. Gestiona alpha, el caso especial de
+// la Tuerca (siempre metálica) y delega el resto en la skin activa.
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
   context.globalAlpha = alpha ?? 1;
 
-  // Tuerca: celda metálica biselada con esquinas redondeadas (índice 8).
+  const px = x * size + 1;
+  const py = y * size + 1;
+  const s = size - 2;
+
+  // La Tuerca (índice 8) mantiene su aspecto metálico en todas las skins.
   if (colorIndex === 8) {
-    const px = x * size + 1;
-    const py = y * size + 1;
-    const s = size - 2;
-    const radius = size * 0.28;
-    // Base metálica con degradado (claro arriba-izq → oscuro abajo-der).
-    const grad = context.createLinearGradient(px, py, px + s, py + s);
-    grad.addColorStop(0, '#c4c4c4');
-    grad.addColorStop(0.5, '#9e9e9e');
-    grad.addColorStop(1, '#6b6b6b');
-    context.beginPath();
-    context.roundRect(px, py, s, s, radius);
-    context.fillStyle = grad;
-    context.fill();
-    // Realce claro arriba/izquierda.
-    context.strokeStyle = 'rgba(255,255,255,0.35)';
-    context.lineWidth = 1.5;
-    context.beginPath();
-    context.roundRect(px + 1, py + 1, s - 2, s - 2, radius - 1);
-    context.stroke();
-    // Sombra oscura abajo/derecha para el bisel.
-    context.fillStyle = 'rgba(0,0,0,0.18)';
-    context.beginPath();
-    context.roundRect(px + s * 0.45, py + s * 0.45, s * 0.55, s * 0.55, radius);
-    context.fill();
-    context.globalAlpha = 1;
-    return;
+    drawNut(context, px, py, s, size);
+  } else {
+    const color = skinColor(colorIndex);
+    SKINS[activeSkin].drawBlock(context, px, py, s, color);
   }
 
-  const color = COLORS[colorIndex];
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  // Restaura valores neutros para no contaminar dibujos posteriores.
   context.globalAlpha = 1;
+  context.shadowBlur = 0;
+  context.shadowColor = 'transparent';
+}
+
+// Tuerca: celda metálica biselada con esquinas redondeadas (índice 8).
+function drawNut(context, px, py, s, size) {
+  const radius = size * 0.28;
+  // Base metálica con degradado (claro arriba-izq → oscuro abajo-der).
+  const grad = context.createLinearGradient(px, py, px + s, py + s);
+  grad.addColorStop(0, '#c4c4c4');
+  grad.addColorStop(0.5, '#9e9e9e');
+  grad.addColorStop(1, '#6b6b6b');
+  context.beginPath();
+  context.roundRect(px, py, s, s, radius);
+  context.fillStyle = grad;
+  context.fill();
+  // Realce claro arriba/izquierda.
+  context.strokeStyle = 'rgba(255,255,255,0.35)';
+  context.lineWidth = 1.5;
+  context.beginPath();
+  context.roundRect(px + 1, py + 1, s - 2, s - 2, radius - 1);
+  context.stroke();
+  // Sombra oscura abajo/derecha para el bisel.
+  context.fillStyle = 'rgba(0,0,0,0.18)';
+  context.beginPath();
+  context.roundRect(px + s * 0.45, py + s * 0.45, s * 0.55, s * 0.55, radius);
+  context.fill();
+}
+
+// Retro: bloque cuadrado de color plano con un realce superior (estilo original).
+function drawRetroBlock(context, px, py, s, color) {
+  context.fillStyle = color;
+  context.fillRect(px, py, s, s);
+  context.fillStyle = 'rgba(255,255,255,0.12)';
+  context.fillRect(px, py, s, 4);
+}
+
+// Neon: núcleo oscuro con borde brillante y glow (shadowBlur/shadowColor).
+function drawNeonBlock(context, px, py, s, color) {
+  context.shadowColor = color;
+  context.shadowBlur = 12;
+  context.fillStyle = color;
+  context.fillRect(px, py, s, s);
+  // Núcleo oscuro para simular el tubo de neón; sin glow interno.
+  context.shadowBlur = 0;
+  context.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  context.fillRect(px + 3, py + 3, s - 6, s - 6);
+  // Reflejo tenue interior del color.
+  context.fillStyle = color;
+  context.globalAlpha = (context.globalAlpha ?? 1) * 0.35;
+  context.fillRect(px + 4, py + 4, s - 8, 3);
+}
+
+// Pastel: bloque de esquinas redondeadas (roundRect) con colores suaves.
+function drawPastelBlock(context, px, py, s, color) {
+  const radius = s * 0.3;
+  context.beginPath();
+  context.roundRect(px, py, s, s, radius);
+  context.fillStyle = color;
+  context.fill();
+  // Realce superior redondeado.
+  context.fillStyle = 'rgba(255,255,255,0.35)';
+  context.beginPath();
+  context.roundRect(px + 2, py + 2, s - 4, (s - 4) * 0.42, radius * 0.7);
+  context.fill();
+}
+
+// Pixel art: color base + textura de subceldas (tramado claro/oscuro) y borde.
+function drawPixelBlock(context, px, py, s, color) {
+  context.fillStyle = color;
+  context.fillRect(px, py, s, s);
+  const n = 4;
+  const cell = s / n;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      // Tramado tipo tablero: aclara/oscurece alternando para textura de píxel.
+      context.fillStyle = (i + j) % 2 === 0 ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.16)';
+      context.fillRect(px + i * cell, py + j * cell, cell, cell);
+    }
+  }
+  // Borde oscuro para acentuar el look pixelado.
+  context.strokeStyle = 'rgba(0,0,0,0.35)';
+  context.lineWidth = 1;
+  context.strokeRect(px + 0.5, py + 0.5, s - 1, s - 1);
 }
 
 function drawGrid() {
-  ctx.strokeStyle = gridColor;
+  ctx.strokeStyle = SKINS[activeSkin].grid || gridColor;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -247,6 +367,7 @@ function drawGrid() {
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  fillSkinBg(ctx, canvas.width, canvas.height);
   drawGrid();
 
   // board
@@ -270,6 +391,7 @@ function draw() {
 function drawNext() {
   const NB = 30;
   nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+  fillSkinBg(nextCtx, nextCanvas.width, nextCanvas.height);
   const shape = next.shape;
   const offX = Math.floor((4 - shape[0].length) / 2);
   const offY = Math.floor((4 - shape.length) / 2);
@@ -282,6 +404,7 @@ function drawHold() {
   const HB = 30;
   holdCanvas.classList.toggle('locked', holdUsed);
   holdCtx.clearRect(0, 0, holdCanvas.width, holdCanvas.height);
+  fillSkinBg(holdCtx, holdCanvas.width, holdCanvas.height);
   if (hold === null) return;
   const shape = PIECES[hold];
   const offX = Math.floor((4 - shape[0].length) / 2);
@@ -400,5 +523,30 @@ themeToggleBtn.addEventListener('click', () => {
   if (current) draw();
 });
 
+// Redibuja todos los canvas (tras cambiar de skin o tema).
+function redrawAll() {
+  if (current) draw();
+  if (typeof next !== 'undefined' && next) drawNext();
+  drawHold();
+}
+
+// Fija la skin activa (valida contra SKINS) y sincroniza el selector,
+// sin redibujar. redraw controla si se repinta (falso durante el arranque,
+// cuando aún no existe el estado del juego).
+function applySkin(skin, redraw = true) {
+  if (!SKINS[skin]) skin = 'retro';
+  activeSkin = skin;
+  if (skinSelect) skinSelect.value = skin;
+  if (redraw) redrawAll();
+}
+
+if (skinSelect) {
+  skinSelect.addEventListener('change', () => {
+    localStorage.setItem('tetris-skin', skinSelect.value);
+    applySkin(skinSelect.value);
+  });
+}
+
 applyTheme(localStorage.getItem('theme') === 'light' ? 'light' : 'dark');
+applySkin(localStorage.getItem('tetris-skin') || 'retro', false);
 init();
