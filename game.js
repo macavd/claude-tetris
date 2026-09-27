@@ -42,8 +42,18 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggleBtn = document.getElementById('theme-toggle');
+const pauseMenu = document.getElementById('pause-menu');
+const resumeBtn = document.getElementById('resume-btn');
+const restartMenuBtn = document.getElementById('restart-menu-btn');
+const controlsBtn = document.getElementById('controls-btn');
+const menuControls = document.getElementById('menu-controls');
+const levelSelect = document.getElementById('level-select');
+
+const MAX_START_LEVEL = 10;
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let initialLevel = 1; // nivel con el que arrancará la PRÓXIMA partida
+let startLevel = 1;   // nivel con el que arrancó la partida ACTUAL
 let gridColor = '#22222e';
 
 function createBoard() {
@@ -110,7 +120,7 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + 1;
+    level = Math.max(startLevel, Math.floor(lines / 10) + 1);
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
     updateHUD();
   }
@@ -265,13 +275,16 @@ function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
+    // Reanudar: oculta el menú y reinicia el loop.
+    pauseMenu.classList.add('hidden');
+    menuControls.classList.add('hidden'); // colapsa el subpanel de controles
+    controlsBtn.setAttribute('aria-expanded', 'false');
     lastTime = performance.now();
     loop(lastTime);
   } else {
+    // Pausar: detiene el loop y muestra el menú.
     cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
+    pauseMenu.classList.remove('hidden');
   }
 }
 
@@ -295,22 +308,28 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  startLevel = initialLevel;
+  level = startLevel;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
   dropAccum = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  pauseMenu.classList.add('hidden');
+  menuControls.classList.add('hidden');
+  controlsBtn.setAttribute('aria-expanded', 'false');
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
 document.addEventListener('keydown', e => {
-  if (e.code === 'KeyP') { togglePause(); return; }
+  // P y Escape alternan la pausa; el return evita que la tecla se filtre al juego.
+  if (e.code === 'KeyP' || e.code === 'Escape') { togglePause(); return; }
+  // Con el menú abierto (o game over) no se procesa ninguna acción del juego.
   if (paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
@@ -335,6 +354,35 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+
+// ---- Menú de pausa ----
+// Rellena el selector de nivel inicial (1..MAX_START_LEVEL).
+for (let lvl = 1; lvl <= MAX_START_LEVEL; lvl++) {
+  const opt = document.createElement('option');
+  opt.value = String(lvl);
+  opt.textContent = String(lvl);
+  levelSelect.appendChild(opt);
+}
+levelSelect.value = String(initialLevel);
+
+levelSelect.addEventListener('change', () => {
+  initialLevel = parseInt(levelSelect.value, 10) || 1;
+});
+
+resumeBtn.addEventListener('click', () => {
+  resumeBtn.blur();
+  togglePause(); // como paused es true, reanuda
+});
+
+restartMenuBtn.addEventListener('click', () => {
+  restartMenuBtn.blur();
+  init(); // nueva partida arrancando en initialLevel
+});
+
+controlsBtn.addEventListener('click', () => {
+  const visible = menuControls.classList.toggle('hidden');
+  controlsBtn.setAttribute('aria-expanded', String(!visible));
+});
 
 function updateGridColor() {
   gridColor = getComputedStyle(document.body).getPropertyValue('--grid-color').trim();

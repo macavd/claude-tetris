@@ -224,3 +224,99 @@ kbd {
 #restart-btn:hover {
   background: var(--btn-hover);
 }
+
+/* ---- Menú de pausa ---- */
+.menu-box {
+  gap: 14px;
+  min-width: 200px;
+}
+
+.menu-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: var(--accent);
+}
+
+.menu-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.menu-field label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--label-color);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+#level-select {
+  background: var(--kbd-bg);
+  color: var(--text);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.menu-btn {
+  width: 180px;
+  background: var(--kbd-bg);
+  color: var(--text);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.menu-btn:hover {
+  border-color: var(--accent);
+}
+
+.menu-btn--primary {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-color: transparent;
+}
+
+.menu-btn--primary:hover {
+  background: var(--btn-hover);
+  border-color: transparent;
+}
+
+.menu-controls {
+  width: 180px;
+  background: var(--overlay-bg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.menu-controls.hidden {
+  display: none;
+}
+
+.menu-controls ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.menu-controls li {
+  font-size: 12px;
+  color: var(--controls-text);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
